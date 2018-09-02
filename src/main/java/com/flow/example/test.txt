@@ -1,0 +1,81 @@
+
+
+
+Reactive Streams
+1. Overview
+Reactive Streams aims to improve concurrency workflows for developers by solving the pain of
+back-pressure (when fast data source doesn’t overwhelm the stream destination).
+
+reactive-stream-backpressure
+
+In the image above, we can see that if
+Destination can not deal with incoming data from Source,
+all future data could be blocked until the existing ones are processed.
+
+If the Source checks when Destination is not overflowed to send data, the problem could be solved. But in this case, it is still synchronous communication and we don’t take advantage of an asynchronous system which enables the parallel use of computing resources, on collaborating network hosts or multi-core processor.
+
+Reactive Streams processes an asynchronous stream data across an asynchronous boundary (passing elements on to another thread or thread-pool), and receiving side (Destination) is not forced to buffer arbitrary amounts of data, then buffer overflow will not occur.
+
+In summary, Reactive Streams:
+– process a potentially unbounded number of elements
+– in sequence,
+– asynchronously passing elements between components,
+– with mandatory non-blocking back-pressure.
+
+These things are possible by flow control and the
+publish-subscribe pattern which allows the subscriber to be able to understand limitation and
+show publisher its capacity.
+
+2. Publish-Subscribe Pattern with Flow Control
+It is a bi-directional transport:
+– signal for demand emitted from subscriber to publisher.
+– data flow emitted from publisher to subscriber.
+
+reactive-stream-pubsub-pattern-flow
+
+If the subscriber emits a demand request, the publisher can push up to the number of request elements
+safety. It helps to prevent wasting resources.
+Because demand is signalled asynchronously, the subscriber, by its capacity,
+can send requests as much as possible for future work.
+
+When the subscriber is slower than publisher, it works like a pull-based system
+and a push-based system when the subscriber is faster.
+
+For example, if a subscriber requests few items (2,3 items or less, only 1), it’s effectively a pull.
+If that subscriber requests more elements than the publisher is ready to emit (100 items or more),
+flow is changed to push.
+
+Reactive Streams doesn’t provide the strategy for spinning up new subscribers on
+different threads to handle the volume and load balance elements between those subscribers,
+we should do these things ourselves or use a specific Reactive Streams library.
+
+To understand the behaviour, we will look at new Java 9 Flow API for Reactive Streams.
+
+II. Java 9 Flow API
+1. Components
+Java 9 provides java.util.concurrent.Flow API that supports the Reactive Streams
+publish-subscribe framework. There are 4 components: Publisher, Subscriber, Subscription and Processor.
+
+At a glance:
+
+
+– Publisher uses its subscribe() method with Subscriber object as input parameter.
+That Subscriber now subscribes the Publisher.
+
+– Publisher defines its own Subscription implementation and produces data elements for that Subscription.
+– When a Subscriber subscribes a Publisher, onSubscribe() method is invoked.
+Then Subscriber now can use Subscription to link to the Publisher by request(numberItems) or cancel()
+method.
+– Publisher uses Subscription to invoke Subscriber‘s methods:
++ onNext() if publishing items to the Subscriber asynchronously, normally using an Executor.
++ onComplete() when no more elements are available,
++ onError() if there is a failure.
+
+– So, what is a Processor?
+A Processor is a component that sits between the Publisher and Subscriber. It acts as:
++ a Subscriber when emitting a request signal to Publisher
++ a Publisher when pushing items to Subscriber.
+
+We can create one or more Processors in chain which link a Publisher to a Subscriber.
+
+
